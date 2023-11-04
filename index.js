@@ -1,0 +1,100 @@
+const express = require('express')
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const cors = require('cors')
+require('dotenv').config()
+const app = express()
+const port = process.env.PORT || 5000
+
+const corsConfig = {
+    origin: '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    }
+
+    app.use(cors(corsConfig))
+    app.options("", cors(corsConfig))
+    
+    app.use(express.json())
+
+
+
+
+const uri = `mongodb+srv://${process.env.BD_USER}:${process.env.BD_PASSWORD}@cluster0.i6scrno.mongodb.net/?retryWrites=true&w=majority`;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+
+async function run() {
+  try {
+    // Connect the client to the server	(optional starting in v4.7)
+    //await client.connect();
+
+    const articlesCollection = client.db('newspapers').collection('articles')
+
+    //get all products
+    app.get('/articles',async(req,res) =>{
+        const result = await articlesCollection.find().toArray()
+        res.send(result)
+    })
+
+    //post single product
+    app.post('/articles',async(req,res) =>{
+        const product = req.body
+        const result = await articlesCollection.insertOne(product)
+        res.send(result)
+    })
+
+    //single products details
+    app.get('/articles/:id', async (req, res) => {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await articlesCollection.findOne(query)
+        res.send(result)
+      })
+
+      app.delete('/articles/:id', async (req, res) => {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await articlesCollection.deleteOne(query)
+        res.send(result)
+      })
+
+      //single product details update
+
+      app.patch('/articles/:id', async (req, res) => {
+        const id = req.params.id
+        const updatedData = req.body
+        const filter = { _id: new ObjectId(id) }
+        const updatedDoc = {
+          $set: {
+            ...updatedData
+          }
+        }
+        const result = await articlesCollection.updateOne(filter, updatedDoc)
+        res.send(result)
+      })
+
+    // Send a ping to confirm a successful connection
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+    // Ensures that the client will close when you finish/error
+    //await client.close();
+  }
+}
+run().catch(console.dir);
+
+
+app.get('/', (req, res) => {
+    res.send(' newspaper side is running')
+  })
+  
+  app.listen(port, () => {
+    console.log(` newspaper shop side is running on port, ${port}`)
+  })
